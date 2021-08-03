@@ -27,16 +27,16 @@ analyze_info = {
     "workspace": "c:/workspace",
     "software_version": "R22",
     "project_name": "Project1",
-    "plugin_config": {}
+    "plugin_config": {},
+    "platform": render_para['platform']
 }
 analyze_obj = AnalyzeC4d(**analyze_info)
 analyze_obj.analyse(exe_path=r"C:\Program Files\Maxon Cinema 4D R22\Cinema 4D.exe")
 
-# step2:Add some custom parameters, or update the original parameter value
+# Step2:Add some custom parameters, or update the original parameter value
 update_task = {
     "pre_frames": "100",
-    "stop_after_test": "1",
-    "hardwareConfigId": "5",
+    "stop_after_test": "1"
 }
 update_task_info(update_task, analyze_obj.task_json)
 
@@ -46,11 +46,18 @@ append_to_task(custom_info_to_task, analyze_obj.task_json)
 custom_info_to_upload = []
 append_to_upload(custom_info_to_upload, analyze_obj.upload_json)
 
-# step3:Check json files
-check_obj = RayvisionCheck(api, analyze_obj)
-task_id = check_obj.execute(analyze_obj.task_json, analyze_obj.upload_json)
+# Step3: Set platform hardware configuration information
+hardware_config = {
+    "model": "Default",  # Platform CPU: Default or Platform GPU: 1080Ti or 2080Ti
+    "ram": "128GB",  # memory: 64GB or 128GB
+    "gpuNum": None  # GPU platform requires input like 2*GPU, if CPU platform it is None
+}
 
-# Step4:Transmission
+# Step4:Check json files
+check_obj = RayvisionCheck(api, analyze_obj)
+task_id = check_obj.execute(hardware_config, analyze_obj.task_json, analyze_obj.upload_json)
+
+# Step5:Transmission
 """
 There are two ways to upload the transmission:
 Upload_method: 1:upload four json files and upload the resource file according to upload.json;
@@ -69,17 +76,17 @@ and users can choose their own upload method according to the actual situation.
 """
 upload_method = 1
 if upload_method == 1:
-    # step4.1:Json files are uploaded in conjunction with CG resources
+    # step5.1:Json files are uploaded in conjunction with CG resources
     upload_obj.upload(str(task_id), **CONFIG_PATH)
 elif upload_method == 2:
-    # step4.2:CG resource files and json are uploaded separately
+    # step5.2:CG resource files and json are uploaded separately
     upload_obj.upload_asset(upload_json_path=CONFIG_PATH["upload_json_path"])
     upload_obj.upload_config(str(task_id), list(CONFIG_PATH.values()))
 
-# Step5:Submit Task
+# Step6:Submit Task
 api.submit(int(task_id))
 
-# Step6:Download
+# Step7:Download
 download = RayvisionDownload(api)
 # All complete before the automatic start of uniform download.
 # download.auto_download_after_task_completed([task_id])
