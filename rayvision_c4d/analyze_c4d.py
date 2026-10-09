@@ -12,6 +12,7 @@ import os
 import sys
 import time
 from builtins import str
+import threading
 
 from rayvision_c4d.constants import PACKAGE_NAME
 from rayvision_c4d.get_preferences import GetInstallPath
@@ -73,7 +74,7 @@ class AnalyzeC4d(object):
 
         local_os = self.check_local_os(local_os)
         self.local_os = local_os
-        self.tmp_mark = str(int(time.time()))
+        self.tmp_mark = str(int(time.time())) + str(self.get_current_id())
         workspace = os.path.join(self.check_workspace(workspace),
                                  self.tmp_mark)
         if not os.path.exists(workspace):
@@ -90,11 +91,18 @@ class AnalyzeC4d(object):
         self.tips_json = os.path.join(workspace, "tips.json")
         self.asset_json = os.path.join(workspace, "asset.json")
         self.upload_json = os.path.join(workspace, "upload.json")
-        self.analyse_log_path = os.path.join(workspace, "analyze.log")
+        self.analyse_log_path = workspace
         self.tips_info = {}
         self.task_info = {}
         self.asset_info = {}
         self.upload_info = {}
+
+    @staticmethod
+    def get_current_id():
+        if isinstance(threading.current_thread(), threading._MainThread):
+            return os.getpid()
+        else:
+            return threading.get_ident()
 
     @staticmethod
     def check_path(tmp_path):
@@ -263,7 +271,7 @@ class AnalyzeC4d(object):
         curr_dir = os.path.dirname(__file__)
         base_dir = os.path.abspath(curr_dir)
 
-        src_plugin = os.path.join(base_dir, 'tool')
+        src_plugin = os.path.join(base_dir, 'Analyze')
 
         maxon_temp_path = os.path.join(os.getenv('APPDATA'), 'MAXON')
 
@@ -331,19 +339,19 @@ class AnalyzeC4d(object):
         self.write_task_json()
 
         print('Analyze cg file: [%s]' % self.cg_file)
-        if sys.version_info.major == 2:
-            cg_file = base64.b64encode(bytes(self.cg_file)).decode("utf-8")
-        else:
-            cg_file = base64.b64encode(bytes(self.cg_file, 'utf-8')).decode("utf-8")
-        print('Encoded cg file: [%s]' % cg_file)
+        # if sys.version_info.major == 2:
+        #     cg_file = base64.b64encode(bytes(self.cg_file)).decode("utf-8")
+        # else:
+        #     cg_file = base64.b64encode(bytes(self.cg_file, 'utf-8')).decode("utf-8")
+        # print('Encoded cg file: [%s]' % cg_file)
 
         if self.local_os == 'windows':
-            cmd = ('"{exe_path}" -cg_file="{cg_file}" -task_json="{task_json}" '
+            cmd = ('"{exe_path}" -cg_file="{cg_file}" --taskjson="{task_json}" '
                    '-asset_json="{asset_json}" -tips_json="{tips_json}" -upload_json="{upload_json}" '
                    '-log_path="{log_path}" '
                    '-parallel -nogui').format(
                 exe_path=exe_path,
-                cg_file=cg_file,
+                cg_file=self.cg_file,
                 task_json=self.task_json,
                 asset_json=self.asset_json,
                 tips_json=self.tips_json,
